@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CalculusAI — Generador de Reactivos de Derivadas (SML Local)</title>
+
+  <!-- Google Fonts & KaTeX -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #eef2ff;
+      --success: #10b981;
+      --success-light: #ecfdf5;
+      --danger: #ef4444;
+      --danger-light: #fef2f2;
+      --surface: #ffffff;
+      --background: #f8fafc;
+      --border: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--background);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 30px 16px;
+    }
+
+    .container { max-width: 840px; margin: 0 auto; }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .badges {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    .badge-primary { background: var(--primary-light); color: var(--primary); }
+    .badge-success { background: var(--success-light); color: #047857; }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text-main);
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+    }
+    .header p {
+      color: var(--text-muted);
+      font-size: 15px;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+      margin-bottom: 24px;
+      transition: all 0.3s ease;
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    /* Inputs & Buttons */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    label { font-size: 13px; font-weight: 600; color: #334155; }
+    
+    input[type="text"], select {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      font-family: inherit;
+      font-size: 14px;
+      background: #f8fafc;
+      color: var(--text-main);
+      transition: all 0.2s;
+    }
+    input[type="text"]:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 22px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
+    }
+    .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+    .btn:disabled {
+      background: #cbd5e1;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* Progress bar */
+    .progress-box {
+      margin-top: 18px;
+      display: none;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 12px;
+      background: #f1f5f9;
+      border-radius: 9999px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .progress-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #4f46e5, #06b6d4);
+      border-radius: 9999px;
+      transition: width 0.3s;
+    }
+    .progress-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* Problem Section */
+    .problem-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 12px;
+    }
+    .enunciado {
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.6;
+      margin-bottom: 20px;
+      color: #0f172a;
+    }
+
+    .opciones-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .opcion-btn {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      background: #ffffff;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+      font-size: 15px;
+    }
+    .opcion-btn:hover:not(.bloqueado) {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      transform: translateX(4px);
+    }
+    .opcion-letra {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: #f1f5f9;
+      color: #475569;
+      font-weight: 700;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+    .opcion-btn.correcta {
+      border-color: var(--success);
+      background: var(--success-light);
+    }
+    .opcion-btn.correcta .opcion-letra {
+      background: var(--success);
+      color: white;
+    }
+    .opcion-btn.incorrecta {
+      border-color: var(--danger);
+      background: var(--danger-light);
+    }
+    .opcion-btn.incorrecta .opcion-letra {
+      background: var(--danger);
+      color: white;
+    }
+
+    /* Explanation */
+    .explicacion-box {
+      margin-top: 20px;
+      padding: 18px;
+      border-radius: 12px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+    .explicacion-box h4 {
+      color: #1e40af;
+      margin-bottom: 6px;
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .explicacion-box p {
+      color: #1e3a8a;
+      font-size: 15px;
+    }
+
+    /* Score counter */
+    .stats {
+      display: flex;
+      gap: 16px;
+      background: #f8fafc;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .stat-item { display: flex; align-items: center; gap: 6px; }
+
+    .placeholder-box {
+      text-align: center;
+      padding: 30px 15px;
+      color: var(--text-muted);
+      border: 2px dashed #cbd5e1;
+      border-radius: 12px;
+      margin-top: 20px;
+      background: #f8fafc;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .spinner {
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top: 2px solid white;
+      width: 16px;
+      height: 16px;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Encabezado -->
+    <div class="header">
+      <div class="badges">
+        <span class="badge badge-primary">⚡ Inferencia 100% en Navegador (WASM)</span>
+        <span class="badge badge-success">🛡️ Sin Servidores ni Costos de API</span>
+      </div>
+      <h1>Evaluador Inteligente de Cálculo Diferencial</h1>
+      <p>Generación de reactivos de derivadas con un modelo de lenguaje afinado (Qwen2.5-0.5B)</p>
+    </div>
+
+    <!-- Paso 1: Carga de Modelo -->
+    <div class="card" id="card-carga">
+      <div class="card-title">
+        <span>📦</span> 1. Cargar Modelo en Memoria
+      </div>
+      <div class="card-subtitle">
+        El modelo (~350 MB) se descarga directamente a la memoria de tu navegador y se almacena en caché local para que no vuelvas a descargarlo.
+      </div>
+
+      <div class="form-group">
+        <label for="input-hf-url">URL de tu modelo GGUF en Hugging Face:</label>
+        <input type="text" id="input-hf-url" value="https://huggingface.co/Dexter2k1/qwen2.5-0.5b-derivadas/resolve/main/qwen2.5_0.5b_derivadas.gguf">
+      </div>
+
+      <button class="btn btn-primary" id="btn-iniciar" onclick="iniciarModelo()">
+        <span>Cargar Modelo en el Navegador</span>
+      </button>
+
+      <div class="progress-box" id="progreso-box">
+        <div class="progress-bar"><div class="progress-fill" id="barra"></div></div>
+        <div class="progress-info">
+          <span id="progreso-texto">Iniciando descarga...</span>
+          <span id="progreso-bytes">0 MB / 0 MB</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Paso 2: Generador y Práctica Interactiva -->
+    <div class="card" id="card-practica" style="display: none;">
+      <div class="problem-header">
+        <div class="stats">
+          <div class="stat-item" style="color: #059669;">✅ Correctas: <span id="count-ok">0</span></div>
+          <div class="stat-item" style="color: #dc2626;">❌ Incorrectas: <span id="count-err">0</span></div>
+        </div>
+        <span class="badge badge-primary" id="badge-tema">Listo para evaluar</span>
+      </div>
+
+      <div class="form-group">
+        <label for="select-tema"><strong>Selecciona el tema de evaluación:</strong></label>
+        <div style="display: flex; gap: 10px;">
+          <select id="select-tema">
+            <option value="regla_de_la_cadena">Regla de la Cadena</option>
+            <option value="polinomial">Funciones Polinomiales</option>
+            <option value="trigonometrica">Funciones Trigonométricas</option>
+            <option value="exponencial_logaritmica">Exponenciales y Logarítmicas</option>
+            <option value="fraccionaria_radical">Radicales y Fraccionarias</option>
+            <option value="producto_cociente">Producto y Cociente</option>
+          </select>
+          <button class="btn btn-primary" id="btn-generar" style="width: auto; min-width: 180px;" onclick="generarReactivo()">
+            <span>Generar Reactivo</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mensaje inicial de espera -->
+      <div id="placeholder-box" class="placeholder-box">
+        <p>🎯 El modelo está listo en la memoria de tu navegador.</p>
+        <p style="font-size: 13px; margin-top: 4px;">Elige un tema arriba y haz clic en <strong>"Generar Reactivo"</strong> para comenzar.</p>
+      </div>
+
+      <!-- Contenedor del reactivo generado -->
+      <div id="reactivo-area" style="display: none; margin-top: 24px;">
+        <div class="enunciado" id="texto-enunciado"></div>
+        <div class="opciones-grid" id="opciones-grid"></div>
+
+        <!-- Explicación -->
+        <div class="explicacion-box" id="explicacion-box">
+          <h4>Paso a paso de la Solución</h4>
+          <p id="texto-explicacion"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Motor Wllama y Lógica -->
+  <script type="module">
+    import { Wllama } from 'https://cdn.jsdelivr.net/npm/@wllama/wllama@2.3.7/esm/index.js';
+
+    let wllama = null;
+    let reactivoActual = null;
+    let correctas = 0;
+    let incorrectas = 0;
+    let respondido = false;
+
+    const WLLAMA_CONFIG = {
+      'single-thread/wllama.wasm': 'https://cdn.jsdelivr.net/npm/@wllama/wllama@2.3.7/src/single-thread/wllama.wasm',
+      'multi-thread/wllama.wasm': 'https://cdn.jsdelivr.net/npm/@wllama/wllama@2.3.7/src/multi-thread/wllama.wasm',
+    };
+
+    window.iniciarModelo = async function() {
+      let url = document.getElementById('input-hf-url').value.trim();
+      const btn = document.getElementById('btn-iniciar');
+      const box = document.getElementById('progreso-box');
+      const barra = document.getElementById('barra');
+      const texto = document.getElementById('progreso-texto');
+      const bytes = document.getElementById('progreso-bytes');
+
+      if (!url || url.includes("TU_USUARIO")) {
+        alert("Por favor ingresa la URL real de tu modelo en Hugging Face (reemplaza TU_USUARIO).");
+        return;
+      }
+
+      // Convertir a URL absoluta si es relativa
+      if (url.startsWith('./') || url.startsWith('/')) {
+        url = new URL(url, window.location.href).href;
+      }
+
+      btn.disabled = true;
+      box.style.display = 'block';
+
+      try {
+        wllama = new Wllama(WLLAMA_CONFIG);
+
+        await wllama.loadModelFromUrl(url, {
+          progressCallback: ({ loaded, total }) => {
+            if (total) {
+              const pct = Math.round((loaded / total) * 100);
+              barra.style.width = pct + '%';
+              texto.innerText = `Descargando en caché local: ${pct}%`;
+              bytes.innerText = `${(loaded / 1024 / 1024).toFixed(1)} MB / ${(total / 1024 / 1024).toFixed(1)} MB`;
+            }
+          }
+        });
+
+        // Ocultar pantalla de carga y mostrar el panel de práctica listo (sin autogenerar)
+        document.getElementById('card-carga').style.display = 'none';
+        document.getElementById('card-practica').style.display = 'block';
+
+      } catch (err) {
+        alert("Error cargando el modelo: " + err.message);
+        btn.disabled = false;
+      }
+    };
+
+    window.generarReactivo = async function() {
+      const tema = document.getElementById('select-tema').value;
+      const btn = document.getElementById('btn-generar');
+      const area = document.getElementById('reactivo-area');
+      const placeholder = document.getElementById('placeholder-box');
+      const badge = document.getElementById('badge-tema');
+
+      respondido = false;
+      btn.disabled = true;
+      btn.innerHTML = `<span class="spinner"></span> Generando...`;
+      placeholder.style.display = 'none';
+      area.style.display = 'none';
+      document.getElementById('explicacion-box').style.display = 'none';
+
+      badge.innerText = document.getElementById('select-tema').selectedOptions[0].text;
+
+      const promptChat = `<|im_start|>system\nEres un tutor y evaluador experto en cálculo diferencial. Tu tarea es generar reactivos de opción múltiple de derivadas en formato JSON estricto, incluyendo enunciado en LaTeX, 4 opciones (A, B, C, D), la respuesta correcta y la explicación detallada.<|im_end|>\n<|im_start|>user\nGenera un reactivo de opción múltiple de derivadas. Tema: ${tema}.<|im_end|>\n<|im_start|>assistant\n`;
+
+      try {
+        const output = await wllama.createCompletion(promptChat, {
+          nPredict: 350,
+          sampling: { temp: 0.35, top_p: 0.9 },
+        });
+
+        reactivoActual = JSON.parse(output.trim());
+
+        document.getElementById('texto-enunciado').innerText = reactivoActual.enunciado;
+
+        const grid = document.getElementById('opciones-grid');
+        grid.innerHTML = '';
+
+        for (const [letra, contenido] of Object.entries(reactivoActual.opciones)) {
+          const btnOpc = document.createElement('div');
+          btnOpc.className = 'opcion-btn';
+          btnOpc.id = 'opc-' + letra;
+          btnOpc.innerHTML = `<div class="opcion-letra">${letra}</div><div>${contenido}</div>`;
+          btnOpc.onclick = () => seleccionarOpcion(letra);
+          grid.appendChild(btnOpc);
+        }
+
+        document.getElementById('texto-explicacion').innerText = reactivoActual.explicacion;
+        area.style.display = 'block';
+
+        renderMathInElement(area, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$', right: '$', display: false }
+          ]
+        });
+
+      } catch (err) {
+        alert("Ocurrió un detalle al generar el reactivo: " + err.message);
+        placeholder.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span>Generar Reactivo</span>`;
+      }
+    };
+
+    function seleccionarOpcion(letra) {
+      if (respondido || !reactivoActual) return;
+      respondido = true;
+
+      const esCorrecta = (letra === reactivoActual.respuesta_correcta);
+      const btnElegido = document.getElementById('opc-' + letra);
+      const btnCorrecto = document.getElementById('opc-' + reactivoActual.respuesta_correcta);
+
+      document.querySelectorAll('.opcion-btn').forEach(b => b.classList.add('bloqueado'));
+
+      if (esCorrecta) {
+        btnElegido.classList.add('correcta');
+        correctas++;
+        document.getElementById('count-ok').innerText = correctas;
+      } else {
+        btnElegido.classList.add('incorrecta');
+        btnCorrecto.classList.add('correcta');
+        incorrectas++;
+        document.getElementById('count-err').innerText = incorrectas;
+      }
+
+      const expBox = document.getElementById('explicacion-box');
+      expBox.style.display = 'block';
+      renderMathInElement(expBox, {
+        delimiters: [
+          { left: '$$', right: '$$', display: true },
+          { left: '$', right: '$', display: false }
+        ]
+      });
+    }
+  </script>
+</body>
+</html>
